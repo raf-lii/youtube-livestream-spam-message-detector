@@ -84,12 +84,14 @@ const getLiveChatId = async (auth, liveStreamId) => {
 const getLiveStreamComments = async (auth, liveChatId) => {
     const fetchComments = await google.youtube({version: "v3", auth}).liveChatMessages.list({
         part: "id,snippet",
-        liveChatId
+        liveChatId: liveChatId
     });
 
-    const comments = fetchComments.data.items;
+    return fetchComments;
+}
 
-    return comments;
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 (async () => {
@@ -120,25 +122,36 @@ const getLiveStreamComments = async (auth, liveChatId) => {
             message: " 📽️  Livestream ID :"
         });
 
-        const liveChatId = getLiveChatId(oAuth2Client, liveStreamId.id);
+        console.log(chalk.green('💱 Live chat monitoring started, watching comments...'));
 
-        const comments = getLiveStreamComments(oAuth2Client, liveChatId);
+        const liveChatId = await getLiveChatId(oAuth2Client, liveStreamId.id);
 
-        //loop any comment and check if the comment contains blocked word or not
-        comments.forEach(async (comment) => {
-            const commentText = comment.snippet.displayMessage;
-            const person = comment.snippet.authorChannelId;
-            const idComment = comment.id;
+        while(true){
+            const comments = await getLiveStreamComments(oAuth2Client, liveChatId);
 
-            if(isBlockedWord(commentText)){
-                console.log(chalk.red(`❗ Blocked word detected! (${person}): ${commentText} deleted`));
+            const pollingInterval = process.env.DELAY ?? comments.data.pollingIntervalMillis;
 
-                //deleting comment
-                const deleteComment = await google.youtube({version: "v3", auth: oAuth2Client}).liveChatMessages.delete({
-                    id: idComment
-                });
+            //loop any comment and check if the comment contains blocked word or not
+            const newComments = comments.data.items;
+
+            for(const comment of newComments){
+                const commentText = comment.snippet.displayMessage;
+                const person = comment.snippet.authorChannelId;
+                const idComment = comment.id;
+    
+                if(isBlockedWord(commentText)){
+                    console.log(chalk.red(`❗ Blocked word detected! (${person}): ${commentText} deleted`));
+    
+                    //deleting comment
+                    const deleteComment = await google.youtube({version: "v3", auth: oAuth2Client}).liveChatMessages.delete({
+                        id: idComment
+                    });
+                }
             }
-        })
+
+            console.log(chalk.blue(`↩️ Waiting to fetch new comments ${pollingInterval}ms...`));
+            await delay(pollingInterval);
+        }
         
     }catch(e){
         console.error(chalk.red(`⚠️ Error: ${e.message}`));
