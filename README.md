@@ -2,8 +2,8 @@
 
 This project can make it easier for you to monitor live streams so you don't need to monitor them continuously manually.
 
-> [Notes]
-> Before running this project, please make sure u have [NodeJS](https://nodejs.org) & [npmJS][https://npmjs.com] installed in ur own end
+> [!Notes]
+> Before running this project, please make sure u have [NodeJS](https://nodejs.org) & [npmJS](https://npmjs.com) installed in ur own end
 
 ## Installation
 ```
